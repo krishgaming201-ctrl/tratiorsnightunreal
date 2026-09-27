@@ -1,0 +1,16 @@
+{
+  "name": "traitors-game",
+  "version": "2.0.0",
+  "description": "The Traitors - Realtime Social Deduction Event Companion App",
+  "main": "server.js",
+  "scripts": {
+    "build": "echo Game Ready",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": "20.x"
+  },
+  "keywords": ["traitors", "game", "social-deduction", "realtime", "event-game"],
+  "author": "Antigravity",
+  "license": "MIT"
+}

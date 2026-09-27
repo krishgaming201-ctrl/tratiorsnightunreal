@@ -1,0 +1,68 @@
+{
+  "currentRound": "trial",
+  "phase": "idle",
+  "winnerId": null,
+  "winnerTeam": null,
+  "players": [
+    {
+      "id": "p_h7q3m8pbld91790534155614",
+      "name": "Player 001",
+      "number": "001",
+      "role": "Faithful",
+      "status": "Alive",
+      "hasShield": false,
+      "round1_group": "1",
+      "round2_group": "1",
+      "round3_group": null,
+      "round4_group": null
+    },
+    {
+      "id": "p_2mmbibh7a5b1790534111068",
+      "name": "Player 3",
+      "number": "3",
+      "role": "Faithful",
+      "status": "Alive",
+      "hasShield": false,
+      "round1_group": "1",
+      "round2_group": null,
+      "round3_group": null,
+      "round4_group": null
+    }
+  ],
+  "clues": {
+    "1": "Where shadows gather near the highest wall, search beneath the cold stone to unearth your relic piece.",
+    "2": "Follow the silent corridor toward the mirrored hall. Look where stillness meets forgotten wood.",
+    "3": "In the chamber of silent tomes, seek beneath the lowermost shelf to recover your squad's crest.",
+    "4": "Near the threshold where dusk breaks, examine the base of the sentinel pillar.",
+    "5": "Where two secret pathways converge, the relic shard rests hidden in plain sight.",
+    "6": "Look where the royal tapestry hangs. The secret passage conceals the hidden token."
+  },
+  "relicsFound": {},
+  "timer": {
+    "active": false,
+    "duration": 0,
+    "startedAt": null,
+    "remaining": 0,
+    "label": ""
+  },
+  "voting": {
+    "active": false,
+    "revealed": false,
+    "votes": {},
+    "tally": {},
+    "banishedId": null
+  },
+  "night": {
+    "active": false,
+    "murderVotes": {},
+    "murderTarget": null,
+    "chat": []
+  },
+  "dilemma": {
+    "active": false,
+    "revealed": false,
+    "choices": {},
+    "pairs": []
+  },
+  "soundTrigger": null
+}
