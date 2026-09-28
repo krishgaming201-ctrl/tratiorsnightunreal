@@ -1,0 +1,101 @@
+{
+  "version": 6,
+  "updatedAt": 1790572290966,
+  "currentRound": "1",
+  "phase": "idle",
+  "winnerId": null,
+  "winnerTeam": null,
+  "players": [
+    {
+      "id": "p1",
+      "name": "Player 1",
+      "number": "1",
+      "role": "Faithful",
+      "status": "Alive",
+      "hasShield": false,
+      "round1_group": "1",
+      "round2_group": "1",
+      "round3_group": null,
+      "round4_group": "1"
+    },
+    {
+      "id": "p2",
+      "name": "Player 12",
+      "number": "12",
+      "role": "Faithful",
+      "status": "Alive",
+      "hasShield": false,
+      "round1_group": "1",
+      "round2_group": "2",
+      "round3_group": null,
+      "round4_group": "2"
+    },
+    {
+      "id": "p3",
+      "name": "Player 25",
+      "number": "25",
+      "role": "Faithful",
+      "status": "Alive",
+      "hasShield": false,
+      "round1_group": "1",
+      "round2_group": "3",
+      "round3_group": null,
+      "round4_group": "3"
+    },
+    {
+      "id": "p4",
+      "name": "Player 38",
+      "number": "38",
+      "role": "Traitor",
+      "status": "Alive",
+      "hasShield": false,
+      "round1_group": "1",
+      "round2_group": "4",
+      "round3_group": null,
+      "round4_group": "4"
+    }
+  ],
+  "clues": {
+    "1": "Where shadows gather near the highest wall, search beneath the cold stone to unearth your squad crest.",
+    "2": "Follow the silent corridor toward the mirrored hall. Look where stillness meets forgotten wood.",
+    "3": "In the chamber of silent tomes, seek beneath the lowermost shelf to recover your squad piece.",
+    "4": "Near the threshold where dusk breaks, examine the base of the sentinel pillar.",
+    "5": "Where two secret pathways converge, the relic shard rests hidden in plain sight.",
+    "6": "Look where the royal tapestry hangs. The secret passage conceals the hidden token.",
+    "7": "Search near the entrance archway, investigate beneath the shadowed stones.",
+    "8": "Behind the heavy drapery where the candlelight flickers upon forgotten iron.",
+    "9": "Seek beneath the wooden table in the quiet corner of the grand chamber.",
+    "10": "Find the hidden seal placed at the heart of the sentinel fireplace hearth."
+  },
+  "relicsFound": {},
+  "timer": {
+    "active": false,
+    "duration": 0,
+    "startedAt": null,
+    "remaining": 0,
+    "label": ""
+  },
+  "voting": {
+    "active": false,
+    "revealed": false,
+    "votes": {},
+    "tally": {},
+    "banishedId": null
+  },
+  "night": {
+    "active": false,
+    "murderVotes": {},
+    "murderTarget": null,
+    "chat": []
+  },
+  "dilemma": {
+    "active": false,
+    "revealed": false,
+    "choices": {},
+    "pairs": []
+  },
+  "soundTrigger": {
+    "sound": "gong",
+    "nonce": "1790572290966_qs168"
+  }
+}
