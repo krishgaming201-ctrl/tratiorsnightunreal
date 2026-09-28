@@ -7,6 +7,7 @@ class TraitorsAudioEngine {
     this.ambientGain = null;
     this.fireGain = null;
     this.droneGain = null;
+    this.ambienceEnabled = false; // Ambience off by default so phone speakers don't hum continuously
 
     try {
       this.muted = localStorage.getItem('traitors_muted') === 'true';
@@ -23,7 +24,8 @@ class TraitorsAudioEngine {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
-    if (!this.ambientRunning && !this.muted) {
+    // Only start ambience if explicitly enabled by user
+    if (this.ambienceEnabled && !this.ambientRunning && !this.muted) {
       this.startContinuousAmbience();
     }
   }
@@ -35,16 +37,20 @@ class TraitorsAudioEngine {
     } catch(e) {}
 
     if (this.muted) {
-      if (this.ambientGain && this.ctx) {
-        this.ambientGain.gain.setValueAtTime(0, this.ctx.currentTime);
-      }
+      this.stopContinuousAmbience();
     } else {
       this.unlock();
-      if (this.ambientGain && this.ctx) {
-        this.ambientGain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-      }
     }
     return this.muted;
+  }
+
+  stopContinuousAmbience() {
+    if (this.ambientGain && this.ctx) {
+      try {
+        this.ambientGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      } catch (e) {}
+    }
+    this.ambientRunning = false;
   }
 
   // --- CONTINUOUS AMBIENCE: CASTLE TORCH FIRE CRACKLE + EERIE DRONE ---

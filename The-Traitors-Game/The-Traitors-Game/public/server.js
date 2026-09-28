@@ -448,11 +448,18 @@ const requestHandler = async (req, res) => {
 
   // ================= ADMIN API ROUTES =================
 
+  const respondWithState = (statusCode = 200, extra = {}) => {
+    res.writeHead(statusCode, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
+    });
+    res.end(JSON.stringify(Object.assign({ success: true, state: gameState }, extra)));
+  };
+
   if (pathname === '/api/admin/login' && req.method === 'POST') {
     const { pin } = await parseJson(req);
     if (pin === ADMIN_PIN) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, token: 'authorized' }));
+      respondWithState(200, { token: 'authorized' });
     } else {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Invalid Admin PIN' }));
@@ -460,19 +467,35 @@ const requestHandler = async (req, res) => {
     return;
   }
 
+  if (pathname === '/api/admin/sync-state' && req.method === 'POST') {
+    const { state } = await parseJson(req);
+    if (state && typeof state === 'object') {
+      const currentVersion = gameState.version || 0;
+      const incomingVersion = state.version || 0;
+      const currentCount = (gameState.players || []).length;
+      const incomingCount = (state.players || []).length;
+
+      if (incomingVersion >= currentVersion || incomingCount > currentCount) {
+        gameState = Object.assign(getInitialState(), state);
+        gameState.version = Math.max(currentVersion, incomingVersion) + 1;
+        saveState();
+      }
+    }
+    respondWithState(200);
+    return;
+  }
+
   if (pathname === '/api/admin/reset' && req.method === 'POST') {
     gameState = getInitialState();
     broadcastState("bell");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
   if (pathname === '/api/admin/sound-trigger' && req.method === 'POST') {
     const { sound } = await parseJson(req);
     broadcastState(sound || 'bell');
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -487,16 +510,14 @@ const requestHandler = async (req, res) => {
       label: label || 'Timer'
     };
     broadcastState("gong");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
   if (pathname === '/api/admin/stop-timer' && req.method === 'POST') {
     gameState.timer.active = false;
     broadcastState();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -521,8 +542,7 @@ const requestHandler = async (req, res) => {
     }
 
     broadcastState("gong");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -532,8 +552,7 @@ const requestHandler = async (req, res) => {
     gameState.voting.active = false;
     gameState.night.active = false;
     broadcastState("bell");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -550,8 +569,7 @@ const requestHandler = async (req, res) => {
     });
 
     broadcastState("gong");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -586,16 +604,14 @@ const requestHandler = async (req, res) => {
     }
 
     broadcastState("bell");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
   if (pathname === '/api/admin/reveal-dilemma' && req.method === 'POST') {
     gameState.dilemma.revealed = true;
     broadcastState("gong");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -609,8 +625,7 @@ const requestHandler = async (req, res) => {
     alive.forEach(p => { p.round4_group = "1"; });
 
     broadcastState("bell");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -624,8 +639,7 @@ const requestHandler = async (req, res) => {
     };
     gameState.phase = "voting";
     broadcastState("gong");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -650,8 +664,7 @@ const requestHandler = async (req, res) => {
     gameState.voting.banishedId = highestSuspect;
 
     broadcastState("bell");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, banishedId: highestSuspect, tally }));
+    respondWithState(200, { banishedId: highestSuspect, tally });
     return;
   }
 
@@ -669,8 +682,7 @@ const requestHandler = async (req, res) => {
     gameState.voting.active = false;
     gameState.phase = "idle";
     broadcastState("elimination");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -678,8 +690,7 @@ const requestHandler = async (req, res) => {
     gameState.voting.active = false;
     gameState.phase = "idle";
     broadcastState();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -692,8 +703,7 @@ const requestHandler = async (req, res) => {
     };
     gameState.phase = "night";
     broadcastState("bell");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -717,8 +727,7 @@ const requestHandler = async (req, res) => {
     gameState.night.active = false;
     gameState.phase = "idle";
     broadcastState(shielded ? "gong" : "elimination");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, shielded }));
+    respondWithState(200, { shielded });
     return;
   }
 
@@ -726,8 +735,7 @@ const requestHandler = async (req, res) => {
     gameState.night.active = false;
     gameState.phase = "idle";
     broadcastState();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -738,8 +746,7 @@ const requestHandler = async (req, res) => {
       p.status = 'Eliminated';
       broadcastState("elimination");
     }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -750,8 +757,7 @@ const requestHandler = async (req, res) => {
       p.status = 'Alive';
       broadcastState("gong");
     }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -759,8 +765,7 @@ const requestHandler = async (req, res) => {
     const { id } = await parseJson(req);
     gameState.players = gameState.players.filter(pl => pl.id !== id);
     broadcastState();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -771,8 +776,7 @@ const requestHandler = async (req, res) => {
       p.role = role === 'Traitor' ? 'Traitor' : 'Faithful';
       broadcastState();
     }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -783,8 +787,7 @@ const requestHandler = async (req, res) => {
       p.hasShield = !p.hasShield;
       broadcastState("gong");
     }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, hasShield: p ? p.hasShield : false }));
+    respondWithState(200, { hasShield: p ? p.hasShield : false });
     return;
   }
 
@@ -794,8 +797,7 @@ const requestHandler = async (req, res) => {
     gameState.winnerTeam = team || (id ? (gameState.players.find(p => p.id === id)?.role || null) : null);
     gameState.phase = "ended";
     broadcastState("fanfare");
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -811,8 +813,7 @@ const requestHandler = async (req, res) => {
       else p.round1_group = grpStr;
       broadcastState();
     }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -843,8 +844,7 @@ const requestHandler = async (req, res) => {
     });
 
     broadcastState();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 
@@ -854,8 +854,7 @@ const requestHandler = async (req, res) => {
       gameState.clues[group] = clue;
       broadcastState();
     }
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    respondWithState(200);
     return;
   }
 

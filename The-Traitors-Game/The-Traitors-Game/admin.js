@@ -78,6 +78,24 @@ if (copyBtn) {
   });
 }
 
+async function callAdminApi(endpoint, body = null) {
+  try {
+    const opts = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(endpoint, opts);
+    const data = await res.json();
+    if (data && data.state) {
+      renderAdmin(data.state);
+    }
+    return data;
+  } catch (err) {
+    console.error(`Admin action ${endpoint} failed:`, err);
+  }
+}
+
 let evtSource = null;
 function initSSE() {
   if (evtSource) evtSource.close();
@@ -92,12 +110,26 @@ function initSSE() {
     }
   };
 
-  // Smart Polling fallback for Vercel Serverless
-  setInterval(() => {
-    fetch('/api/state')
-      .then(r => r.json())
-      .then(st => renderAdmin(st))
-      .catch(() => {});
+  // Smart Polling fallback with Cold Lambda Healing
+  setInterval(async () => {
+    try {
+      const r = await fetch('/api/state');
+      const st = await r.json();
+      if (!st) return;
+
+      if (currentGameState && currentGameState.players && currentGameState.players.length > 0) {
+        if (!st.players || st.players.length < currentGameState.players.length || (st.version && st.version < currentGameState.version)) {
+          // Cold lambda detected! Re-seed the server with our authoritative state!
+          await fetch('/api/admin/sync-state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: currentGameState })
+          });
+          return;
+        }
+      }
+      renderAdmin(st);
+    } catch (e) {}
   }, 1400);
 }
 
@@ -346,70 +378,42 @@ function renderPlayerLists(state) {
 window.toggleRole = async (id, currentRole) => {
   const next = currentRole === 'Traitor' ? 'Faithful' : 'Traitor';
   if (confirm(`Change this player's role to ${next.toUpperCase()}?`)) {
-    await fetch('/api/admin/set-role', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, role: next })
-    });
+    await callAdminApi('/api/admin/set-role', { id, role: next });
   }
 };
 
 window.toggleShield = async (id) => {
-  await fetch('/api/admin/toggle-shield', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id })
-  });
+  await callAdminApi('/api/admin/toggle-shield', { id });
 };
 
 window.changeGroupPrompt = async (id, currentGrp) => {
   const grp = prompt(`Enter group number for this player:`, currentGrp);
   if (grp !== null) {
-    await fetch('/api/admin/set-player-group', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, group: grp.trim() })
-    });
+    await callAdminApi('/api/admin/set-player-group', { id, group: grp.trim() });
   }
 };
 
 window.eliminatePlayer = async (id, name) => {
   if (confirm(`Confirm elimination of ${name}?`)) {
-    await fetch('/api/admin/eliminate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
+    await callAdminApi('/api/admin/eliminate', { id });
   }
 };
 
 window.revivePlayer = async (id, name) => {
   if (confirm(`Revive ${name}?`)) {
-    await fetch('/api/admin/revive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
+    await callAdminApi('/api/admin/revive', { id });
   }
 };
 
 window.removePlayer = async (id, name) => {
   if (confirm(`Remove ${name} completely from this game?`)) {
-    await fetch('/api/admin/remove-player', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
+    await callAdminApi('/api/admin/remove-player', { id });
   }
 };
 
 window.declareWinner = async (id, name) => {
   if (confirm(`Declare ${name} as the WINNER of The Traitors?`)) {
-    await fetch('/api/admin/set-winner', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
+    await callAdminApi('/api/admin/set-winner', { id });
   }
 };
 
@@ -423,7 +427,7 @@ if (searchInput) {
 
 // Mystery Soundboard Button Click Handlers
 document.querySelectorAll('.soundboard-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     const sound = btn.dataset.sound;
     // Play locally on Host machine
     if (window.soundEngine) {
@@ -437,99 +441,91 @@ document.querySelectorAll('.soundboard-btn').forEach(btn => {
       else if (sound === 'fanfare') window.soundEngine.playFanfare();
     }
     // Broadcast live to all connected players
-    fetch('/api/admin/sound-trigger', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sound })
-    });
+    await callAdminApi('/api/admin/sound-trigger', { sound });
   });
 });
 
 // Reset Game
 document.getElementById('resetGameBtn').onclick = async () => {
   if (confirm('Reset the entire game state back to the lobby?')) {
-    await fetch('/api/admin/reset', { method: 'POST' });
+    await callAdminApi('/api/admin/reset');
   }
 };
 
 // Round Controls
 document.getElementById('startTrialBtn').onclick = async () => {
-  if (confirm('Start The Relic Trial (Prelude)? This assigns squads and secret roles.')) {
-    await fetch('/api/admin/start-trial', { method: 'POST' });
+  if (confirm('Start Squad Gathering (10 Groups)? This assigns 10 groups sequentially and secret roles.')) {
+    await callAdminApi('/api/admin/start-trial');
   }
 };
 
 document.getElementById('startRound1Btn').onclick = async () => {
   if (confirm('Start Round 1? This reveals secret roles to players.')) {
-    await fetch('/api/admin/start-round1', { method: 'POST' });
+    await callAdminApi('/api/admin/start-round1');
   }
 };
 
 document.getElementById('startRound2Btn').onclick = async () => {
-  if (confirm('Start Round 2? This organizes players into squads of 15.')) {
-    await fetch('/api/admin/start-round2', { method: 'POST' });
+  if (confirm('Start Round 2? This organizes players into 10 squads.')) {
+    await callAdminApi('/api/admin/start-round2');
   }
 };
 
 document.getElementById('startRound3Btn').onclick = async () => {
   if (confirm('Start Round 3? This arranges players into pairs for the Trust / Betray dilemma.')) {
-    await fetch('/api/admin/start-round3', { method: 'POST' });
+    await callAdminApi('/api/admin/start-round3');
   }
 };
 
 document.getElementById('startRound4Btn').onclick = async () => {
   if (confirm('Start Round 4 (The Final Showdown)?')) {
-    await fetch('/api/admin/start-round4', { method: 'POST' });
+    await callAdminApi('/api/admin/start-round4');
   }
 };
 
 // Voting Controls
 document.getElementById('openVotingBtn').onclick = async () => {
   if (confirm('Open the Round Table Banishment Vote on all players phones?')) {
-    await fetch('/api/admin/start-voting', { method: 'POST' });
+    await callAdminApi('/api/admin/start-voting');
   }
 };
 
 document.getElementById('revealVotesBtn').onclick = async () => {
-  await fetch('/api/admin/reveal-votes', { method: 'POST' });
+  await callAdminApi('/api/admin/reveal-votes');
 };
 
 document.getElementById('executeBanishmentBtn').onclick = async () => {
   if (confirm('Execute banishment on the highest-voted player?')) {
-    await fetch('/api/admin/execute-banishment', { method: 'POST' });
+    await callAdminApi('/api/admin/execute-banishment');
   }
 };
 
 document.getElementById('closeVotingBtn').onclick = async () => {
-  await fetch('/api/admin/close-voting', { method: 'POST' });
+  await callAdminApi('/api/admin/close-voting');
 };
 
 // Night Controls
 document.getElementById('startNightBtn').onclick = async () => {
   if (confirm('Initiate Night Phase? Faithful sleep and Traitors vote on murder.')) {
-    await fetch('/api/admin/start-night', { method: 'POST' });
+    await callAdminApi('/api/admin/start-night');
   }
 };
 
 document.getElementById('executeNightBtn').onclick = async () => {
   if (confirm('Confirm murder of the Traitors target?')) {
-    await fetch('/api/admin/execute-night', { method: 'POST' });
+    await callAdminApi('/api/admin/execute-night');
   }
 };
 
 document.getElementById('cancelNightBtn').onclick = async () => {
-  await fetch('/api/admin/cancel-night', { method: 'POST' });
+  await callAdminApi('/api/admin/cancel-night');
 };
 
 const assignByNumBtn = document.getElementById('assignByNumberBtn');
 if (assignByNumBtn) {
   assignByNumBtn.onclick = async () => {
     if (confirm('Assign players in order of player number (1-10 in Group 1, 11-20 in Group 2...)?')) {
-      await fetch('/api/admin/randomize-groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'sequential', groupSize: 10 })
-      });
+      await callAdminApi('/api/admin/randomize-groups', { mode: 'sequential', groupSize: 10 });
     }
   };
 }
@@ -538,11 +534,7 @@ const autoAssignBtn = document.getElementById('autoAssignGroupsBtn');
 if (autoAssignBtn) {
   autoAssignBtn.onclick = async () => {
     if (confirm('Randomly shuffle all alive players into 10 groups (10 players per group)?')) {
-      await fetch('/api/admin/randomize-groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'random', groupSize: 10 })
-      });
+      await callAdminApi('/api/admin/randomize-groups', { mode: 'random', groupSize: 10 });
     }
   };
 }
@@ -551,25 +543,17 @@ if (autoAssignBtn) {
 document.querySelectorAll('.timer-preset-btn').forEach(btn => {
   btn.onclick = async () => {
     const sec = parseInt(btn.dataset.sec, 10);
-    await fetch('/api/admin/start-timer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seconds: sec, label: `${sec / 60}m Timer` })
-    });
+    await callAdminApi('/api/admin/start-timer', { seconds: sec, label: `${sec / 60}m Timer` });
   };
 });
 
 document.getElementById('customTimerBtn').onclick = async () => {
   const m = prompt('Enter timer duration in minutes:');
   if (m && !isNaN(m) && Number(m) > 0) {
-    await fetch('/api/admin/start-timer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seconds: Math.floor(Number(m) * 60), label: `${m}m Timer` })
-    });
+    await callAdminApi('/api/admin/start-timer', { seconds: Math.floor(Number(m) * 60), label: `${m}m Timer` });
   }
 };
 
 document.getElementById('stopTimerBtn').onclick = async () => {
-  await fetch('/api/admin/stop-timer', { method: 'POST' });
+  await callAdminApi('/api/admin/stop-timer');
 };
